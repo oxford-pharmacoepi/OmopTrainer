@@ -19,6 +19,7 @@ Imports:
 Depends: 
     R (>= 4.1)
 Suggests: 
+    omock,
     purrr,
     tools,
     usethis,

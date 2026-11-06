@@ -18,9 +18,7 @@ validateSetup <- function() {
   status$r_version <- checkRVersion(minRVersion = specs$`min-R-version`)
 
   # check that RTools is installed
-  if (specs$`R-tools`) {
-    status$r_tools <- checkRToolsInstalled()
-  }
+  status$r_tools <- checkRToolsInstalled(installed = specs$`R-tools`)
 
   # check list of packages
   status$packages <- checkPackages(pkgs = specs$packages)
@@ -43,7 +41,15 @@ checkRVersion <- function(minRVersion) {
     passed = !oldVersion
   ))
 }
-checkRToolsInstalled <- function() {
+checkRToolsInstalled <- function(installed) {
+  if (!installed) {
+    return(dplyr::tibble(
+      message = "Rtools not needed for this training.",
+      symbol = "v",
+      passed = TRUE
+    ))
+  }
+
   if (.Platform$OS.type != "windows") {
     return(dplyr::tibble(
       message = "Rtools is only required on Windows; check skipped.",
@@ -128,8 +134,53 @@ checkDatasets <- function(datasets) {
   }
 
   # check OMOP_DATA_FOLDER is setup
-  # check delphi-100k, synpuf-1k is downloaded
-  # hability to create the cdm with delphi and synpuf
+  key <- "OMOP_DATA_FOLDER"
+  folder <- Sys.getenv(x = key, unset = "")
+  if (identical(folder, "")) {
+    cli::cli_inform(c(
+      x = "`{key}` is not setup.",
+      i = "Please open the `.Renviron` file ({.run usethis::edit_r_environ()})",
+      ">" = "Populate as:",
+      " " = "{key}=\"path/to/a/local/folder\"",
+      "e.g. {key}=\"/Users/OmopTrainer/Documents/OMOP\"",
+      i = "Restart R once the `.Renviron` file is populated."
+    ))
+    return(dplyr::tibble(
+      message = paste0(key, " is not setup, datasets can not be downloaded"),
+      symbol = "x",
+      passed = FALSE
+    ))
+  }
+
+  if (!rlang::is_installed("omock")) {
+    return(dplyr::tibble(
+      message = "omock is not installed, datasets can not be downloaded",
+      symbol = "x",
+      passed = FALSE
+    ))
+  }
+
+  # datasets are downloaded
+  notDownloaded <- datasets[!purrr::map_lgl(datasets, omock::isMockDatasetDownloaded)] |>
+    suppressMessages()
+
+  if (length(notDownloaded) > 0) {
+    cli::cli_inform(c(
+      x = "{.pkg {notDownloaded}} not been downloaded.",
+      i = "To download a dataset use the following code: {.run omock::omock::downloadMockDataset(\"{notDownloaded[1]}\")}."
+    ))
+    return(dplyr::tibble(
+      message = paste0(length(notDownloaded), " datasets not downloaded"),
+      symbol = "x",
+      passed = FALSE
+    ))
+  }
+
+  return(dplyr::tibble(
+    message = "All datasets have been downloaded and cdm can be created",
+    symbol = "v",
+    passed = TRUE
+  ))
 }
 reportStatus <- function(status) {
   status <- dplyr::bind_rows(status, .id = "check")

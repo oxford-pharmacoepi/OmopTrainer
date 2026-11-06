@@ -1,16 +1,16 @@
-# OmopTraining
+# OmopTrainer
 
-The goal of OmopTraining is to …
+The goal of OmopTrainer is to …
 
 ## Installation
 
-You can install the development version of OmopTraining from
+You can install the development version of OmopTrainer from
 [GitHub](https://github.com/) with:
 
 ``` r
 
 # install.packages("pak")
-pak::pak("oxford-pharmacoepi/OmopTraining")
+pak::pak("oxford-pharmacoepi/OmopTrainer")
 ```
 
 ## Example
@@ -19,7 +19,7 @@ This is a basic example which shows you how to solve a common problem:
 
 ``` r
 
-library(OmopTraining)
+library(OmopTrainer)
 ## basic example code
 ```
 

@@ -16,7 +16,7 @@ Whether your environment is ready
 
 ``` r
 if (FALSE) { # \dontrun{
-library(OmopTraining)
+library(OmopTrainer)
 validateSetup()
 } # }
 ```

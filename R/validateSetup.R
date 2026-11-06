@@ -5,41 +5,72 @@
 #' @export
 #'
 #' @examples
-#' \dontrun{
 #' library(OmopTrainer)
 #' validateSetup()
-#' }
 #'
 validateSetup <- function() {
+  specs <- specifications$base
+
   # compile all the status
   status <- list()
 
+  # check that R is at least 4.2 is installed
+  status$r_version <- checkRVersion(minRVersion = specs$`min-R-version`)
+
   # check that RTools is installed
-  status$r_tools <- checkRToolsInstalled()
+  if (specs$`R-tools`) {
+    status$r_tools <- checkRToolsInstalled()
+  }
 
   # check list of packages
-  pkgs <- c(
-    "pak", "devtools", "usethis", "here", "gh", "duckdb", "dplyr", "dbplyr",
-    "omopgenerics", "omock", "PatientProfiles", "DrugUtilisation",
-    "OmopStudyBuilder", "OmopViewer", "IncidencePrevalence",
-    "OmopConstructor", "CodelistGenerator", "OmopIndices", "OmopConstructor",
-    "CohortCharacteristics", "CohortConstructor", "CohortSurvival",
-    "PhenotypeR", "visOmopResults", "CohortSymmetry", "OmopSketch",
-    "gt", "ggplot2", "MeasurementDiagnostics", "EpiStandard", "scales",
-    "flextable"
-  )
-  status$packages <- checkPackages(pkgs)
+  status$packages <- checkPackages(pkgs = specs$packages)
 
-  # check OMOP_DATA_FOLDER is setup
-  # check delphi-100k, synpuf-1k is downloaded
-  # hability to create the cdm with delphi and synpuf
+  # check datasets
+  status$datasets <- checkDatasets(datasets = specs$datasets)
+
   # check quarto installed
 
   invisible(reportStatus(status))
 }
 
+checkRVersion <- function(minRVersion) {
+  minRVersion <- as.numeric_version(minRVersion)
+  currentVersion <- getRversion()
+  oldVersion <- currentVersion < minRVersion
+  return(dplyr::tibble(
+    message = paste0("R version: ", currentVersion),
+    symbol = ifelse(oldVersion, "x", "v"),
+    passed = !oldVersion
+  ))
+}
 checkRToolsInstalled <- function() {
+  if (.Platform$OS.type != "windows") {
+    return(dplyr::tibble(
+      message = "Rtools is only required on Windows; check skipped.",
+      symbol = "i",
+      passed = TRUE
+    ))
+  }
 
+  tools <- Sys.which(c("make", "gcc"))
+  available <- all(nzchar(tools))
+
+  dplyr::tibble(
+    message = if (available) {
+      paste0(
+        "Rtools build tools found (make: ", tools[["make"]],
+        "; gcc: ", tools[["gcc"]], ")."
+      )
+    } else {
+      paste0(
+        "Rtools build tools were not found. Install the Rtools version ",
+        "matching R ", getRversion(), " and restart R. ",
+        "{.url https://cran.r-project.org/bin/windows/Rtools/}"
+      )
+    },
+    symbol = if (available) "v" else "x",
+    passed = available
+  )
 }
 checkPackages <- function(pkgs) {
   available <- dplyr::as_tibble(utils::available.packages())
@@ -86,6 +117,19 @@ checkPackages <- function(pkgs) {
   }
 
   dplyr::tibble(message = ms, symbol = names(ms), passed = names(ms) == "v")
+}
+checkDatasets <- function(datasets) {
+  if (length(datasets) == 0) {
+    return(dplyr::tibble(
+      message = "No datasets are required.",
+      symbol = "i",
+      passed = TRUE
+    ))
+  }
+
+  # check OMOP_DATA_FOLDER is setup
+  # check delphi-100k, synpuf-1k is downloaded
+  # hability to create the cdm with delphi and synpuf
 }
 reportStatus <- function(status) {
   status <- dplyr::bind_rows(status, .id = "check")

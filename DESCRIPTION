@@ -16,3 +16,10 @@ Imports:
     dplyr,
     rlang,
     utils
+Depends: 
+    R (>= 4.1)
+Suggests: 
+    purrr,
+    tools,
+    usethis,
+    yaml

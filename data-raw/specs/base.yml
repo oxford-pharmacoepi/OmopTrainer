@@ -1,0 +1,38 @@
+min-R-version: "4.1"
+R-tools: TRUE
+packages:
+  - pak
+  - devtools
+  - usethis
+  - here
+  - gh
+  - duckdb
+  - dplyr
+  - dbplyr
+  - omopgenerics
+  - omock
+  - PatientProfiles
+  - DrugUtilisation
+  - OmopStudyBuilder
+  - OmopViewer
+  - IncidencePrevalence
+  - OmopConstructor
+  - CodelistGenerator
+  - OmopIndices
+  - OmopConstructor
+  - CohortCharacteristics
+  - CohortConstructor
+  - CohortSurvival
+  - PhenotypeR
+  - visOmopResults
+  - CohortSymmetry
+  - OmopSketch
+  - gt
+  - ggplot2
+  - MeasurementDiagnostics
+  - EpiStandard
+  - scales
+  - flextable
+datasets:
+  - delphi-100k
+  - synpuf-1k

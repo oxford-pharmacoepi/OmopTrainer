@@ -7,8 +7,10 @@
 #' @export
 #'
 #' @examples
+#' \dontrun{
 #' library(OmopTrainer)
 #' validateSetup()
+#' }
 #'
 validateSetup <- function(training = "base") {
   # input check
@@ -87,7 +89,13 @@ checkRToolsInstalled <- function(installed) {
   }
 }
 checkPackages <- function(pkgs) {
-  available <- dplyr::as_tibble(utils::available.packages())
+  repos <- getOption("repos")
+  if (is.null(repos) || !length(repos)) {
+    repos <- c(CRAN = "https://cloud.r-project.org")
+  } else if ("CRAN" %in% names(repos) && identical(repos[["CRAN"]], "@CRAN@")) {
+    repos[["CRAN"]] <- "https://cloud.r-project.org"
+  }
+  available <- dplyr::as_tibble(utils::available.packages(repos = repos))
   installed <- dplyr::as_tibble(utils::installed.packages())
 
   # check status

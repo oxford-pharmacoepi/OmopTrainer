@@ -19,7 +19,7 @@ validateSetup <- function() {
 
   # check list of packages
   pkgs <- c(
-    "devtools", "usethis", "here", "gh", "duckdb", "dplyr", "dbplyr",
+    "pak", "devtools", "usethis", "here", "gh", "duckdb", "dplyr", "dbplyr",
     "omopgenerics", "omock", "PatientProfiles", "DrugUtilisation",
     "OmopStudyBuilder", "OmopViewer", "IncidencePrevalence",
     "OmopConstructor", "CodelistGenerator", "OmopIndices", "OmopConstructor",
@@ -61,6 +61,13 @@ checkPackages <- function(pkgs) {
   notLatest <- pkgs$package[pkgs$version != pkgs$available_version & pkgs$is_installed]
   if (length(notLatest) > 0) {
     cli::cli_inform(c("!" = "The following packages latest version are not installed: {.pkg {notLatest}}."))
+  }
+
+  allPkgs <- sort(unique(c(notInstalled, notLatest)))
+  if (length(allPkgs) > 0) {
+    fun <- ifelse("pak" %in% allPkgs, "install.packages", "pak::pkg_install")
+    code <- paste0(fun, "(c(\"", paste0(allPkgs, collapse = "\", \""), "\"))")
+    cli::cli_inform(c(i = "RUN THE FOLLOWING BOLCK TO FIX THIS: {.run {code}}"))
   }
 
   # report

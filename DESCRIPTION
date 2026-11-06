@@ -1,9 +1,11 @@
 Package: OmopTrainer
-Title: What the Package Does (One Line, Title Case)
+Title: Check an OMOP Training Environment
 Version: 0.0.0.9000
 Authors@R: 
     person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+Description: Checks whether an R environment is set up for OMOP training,
+    including the required software, packages, configuration, and training
+    data.
 License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)

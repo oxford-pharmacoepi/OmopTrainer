@@ -5,8 +5,14 @@ Validate if the setup for your session has been properly done
 ## Usage
 
 ``` r
-validateSetup()
+validateSetup(training = "base")
 ```
+
+## Arguments
+
+- training:
+
+  Character which training to validate setup for.
 
 ## Value
 

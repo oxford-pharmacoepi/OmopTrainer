@@ -14,7 +14,7 @@ Validate if the setup for your session has been properly done
 }
 \examples{
 \dontrun{
-library(OmopTraining)
+library(OmopTrainer)
 validateSetup()
 }
 

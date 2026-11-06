@@ -6,7 +6,7 @@
 #'
 #' @examples
 #' \dontrun{
-#' library(OmopTraining)
+#' library(OmopTrainer)
 #' validateSetup()
 #' }
 #'
@@ -42,8 +42,8 @@ checkRToolsInstalled <- function() {
 
 }
 checkPackages <- function(pkgs) {
-  available <- dplyr::as_tibble(available.packages())
-  installed <- dplyr::as_tibble(installed.packages())
+  available <- dplyr::as_tibble(utils::available.packages())
+  installed <- dplyr::as_tibble(utils::installed.packages())
 
   # check status
   pkgs <- dplyr::tibble(

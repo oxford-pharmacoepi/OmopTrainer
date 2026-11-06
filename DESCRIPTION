@@ -1,4 +1,4 @@
-Package: OmopTraining
+Package: OmopTrainer
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
@@ -8,9 +8,9 @@ License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Config/roxygen2/version: 8.1.0
-URL: https://oxford-pharmacoepi.github.io/OmopTraining/
+URL: https://oxford-pharmacoepi.github.io/OmopTrainer/
 Imports: 
     cli,
     dplyr,
-    purrr,
-    rlang
+    rlang,
+    utils

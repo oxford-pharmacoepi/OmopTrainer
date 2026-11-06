@@ -1,6 +1,8 @@
 
 #' Validate if the setup for your session has been properly done
 #'
+#' @param training Character which training to validate setup for.
+#'
 #' @returns Whether your environment is ready
 #' @export
 #'
@@ -8,8 +10,12 @@
 #' library(OmopTrainer)
 #' validateSetup()
 #'
-validateSetup <- function() {
-  specs <- specifications$base
+validateSetup <- function(training = "base") {
+  # input check
+  omopgenerics::assertChoice(training, names(specifications), length = 1)
+
+  # get specifications
+  specs <- specifications[[training]]
 
   # compile all the status
   status <- list()
@@ -27,6 +33,7 @@ validateSetup <- function() {
   status$datasets <- checkDatasets(datasets = specs$datasets)
 
   # check quarto installed
+  status$quarto <- checkQuartoInstalled(installed = specs$quarto)
 
   invisible(reportStatus(status))
 }
@@ -61,22 +68,23 @@ checkRToolsInstalled <- function(installed) {
   tools <- Sys.which(c("make", "gcc"))
   available <- all(nzchar(tools))
 
-  dplyr::tibble(
-    message = if (available) {
-      paste0(
-        "Rtools build tools found (make: ", tools[["make"]],
-        "; gcc: ", tools[["gcc"]], ")."
-      )
-    } else {
-      paste0(
-        "Rtools build tools were not found. Install the Rtools version ",
-        "matching R ", getRversion(), " and restart R. ",
-        "{.url https://cran.r-project.org/bin/windows/Rtools/}"
-      )
-    },
-    symbol = if (available) "v" else "x",
-    passed = available
-  )
+  if (!available) {
+    cli::cli_inform(c(
+      x = "Rtools build tools were not found.",
+      i = "Install the Rtools version matching R {getRversion()}, and restart R. {.url https://cran.r-project.org/bin/windows/Rtools/}"
+    ))
+    return(dplyr::tibble(
+      message = "Rtools are not available.",
+      symbol = "x",
+      passed = FALSE
+    ))
+  } else {
+    return(dplyr::tibble(
+      message = "Rtools are available.",
+      symbol = "v",
+      passed = TRUE
+    ))
+  }
 }
 checkPackages <- function(pkgs) {
   available <- dplyr::as_tibble(utils::available.packages())
@@ -102,7 +110,7 @@ checkPackages <- function(pkgs) {
 
   allPkgs <- sort(unique(c(notInstalled, notLatest)))
   if (length(allPkgs) > 0) {
-    fun <- ifelse("pak" %in% allPkgs, "install.packages", "pak::pkg_install")
+    fun <- ifelse("pak" %in% notInstalled, "install.packages", "pak::pkg_install")
     code <- paste0(fun, "(c(\"", paste0(allPkgs, collapse = "\", \""), "\"))")
     cli::cli_inform(c(i = "RUN THE FOLLOWING BOLCK TO FIX THIS: {.run {code}}"))
   }
@@ -163,7 +171,6 @@ checkDatasets <- function(datasets) {
   # datasets are downloaded
   notDownloaded <- datasets[!purrr::map_lgl(datasets, omock::isMockDatasetDownloaded)] |>
     suppressMessages()
-
   if (length(notDownloaded) > 0) {
     cli::cli_inform(c(
       x = "{.pkg {notDownloaded}} not been downloaded.",
@@ -176,11 +183,50 @@ checkDatasets <- function(datasets) {
     ))
   }
 
+  # duckdb is downloaded
+  if (!rlang::is_installed("duckdb")) {
+    return(dplyr::tibble(
+      message = "duckdb is not installed, datasets can not be build into cdm",
+      symbol = "x",
+      passed = FALSE
+    ))
+  }
+
   return(dplyr::tibble(
     message = "All datasets have been downloaded and cdm can be created",
     symbol = "v",
     passed = TRUE
   ))
+}
+checkQuartoInstalled <- function(installed) {
+  if (!installed) {
+    return(dplyr::tibble(
+      message = "quarto not needed for this training.",
+      symbol = "v",
+      passed = TRUE
+    ))
+  }
+
+  quarto <- Sys.which("quarto")
+  available <- nzchar(quarto)
+
+  if (!available) {
+    cli::cli_inform(c(
+      x = "quarto not found.",
+      i = "Install it from {.url https://quarto.org/docs/get-started/}."
+    ))
+    return(dplyr::tibble(
+      message = "quarto is not available.",
+      symbol = "x",
+      passed = FALSE
+    ))
+  } else {
+    return(dplyr::tibble(
+      message = "quarto available.",
+      symbol = "v",
+      passed = TRUE
+    ))
+  }
 }
 reportStatus <- function(status) {
   status <- dplyr::bind_rows(status, .id = "check")

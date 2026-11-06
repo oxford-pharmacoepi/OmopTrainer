@@ -4,7 +4,10 @@
 \alias{validateSetup}
 \title{Validate if the setup for your session has been properly done}
 \usage{
-validateSetup()
+validateSetup(training = "base")
+}
+\arguments{
+\item{training}{Character which training to validate setup for.}
 }
 \value{
 Whether your environment is ready
@@ -13,9 +16,7 @@ Whether your environment is ready
 Validate if the setup for your session has been properly done
 }
 \examples{
-\dontrun{
 library(OmopTrainer)
 validateSetup()
-}
 
 }

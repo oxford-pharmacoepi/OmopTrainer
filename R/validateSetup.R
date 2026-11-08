@@ -22,7 +22,7 @@ validateSetup <- function(training = "base") {
   # compile all the status
   status <- list()
 
-  # check that R is at least 4.2 is installed
+  # check R minimum version
   status$r_version <- checkRVersion(minRVersion = specs$`min-R-version`)
 
   # check that RTools is installed
@@ -45,7 +45,10 @@ checkRVersion <- function(minRVersion) {
   currentVersion <- getRversion()
   oldVersion <- currentVersion < minRVersion
   return(dplyr::tibble(
-    message = paste0("R version: ", currentVersion),
+    message = paste0(
+      "R version ", currentVersion,
+      " (minimum required: ", minRVersion, ")."
+    ),
     symbol = ifelse(oldVersion, "x", "v"),
     passed = !oldVersion
   ))
@@ -92,18 +95,31 @@ checkPackages <- function(pkgs) {
   repos <- getOption("repos")
   if (is.null(repos) || !length(repos)) {
     repos <- c(CRAN = "https://cloud.r-project.org")
-  } else if ("CRAN" %in% names(repos) && identical(repos[["CRAN"]], "@CRAN@")) {
-    repos[["CRAN"]] <- "https://cloud.r-project.org"
+  } else {
+    if (is.null(names(repos))) {
+      names(repos) <- paste0("repo", seq_along(repos))
+    }
+    if ("CRAN" %in% names(repos) && identical(repos[["CRAN"]], "@CRAN@")) {
+      repos[["CRAN"]] <- "https://cloud.r-project.org"
+    }
   }
-  available <- dplyr::as_tibble(utils::available.packages(repos = repos))
-  installed <- dplyr::as_tibble(utils::installed.packages())
+  available <- tryCatch(
+    utils::available.packages(repos = repos),
+    error = function(e) NULL
+  )
+  installed <- utils::installed.packages()
+  availableVersion <- if (is.null(available) || nrow(available) == 0L) {
+    rep(NA_character_, length(pkgs))
+  } else {
+    available[match(pkgs, available[, "Package"]), "Version"]
+  }
 
   # check status
   pkgs <- dplyr::tibble(
     package = pkgs,
-    is_installed = pkgs %in% installed$Package,
-    version = installed$Package[match(pkgs, installed$Package)],
-    available_version = available$Version[match(pkgs, available$Package)]
+    is_installed = pkgs %in% installed[, "Package"],
+    version = installed[match(pkgs, installed[, "Package"]), "Version"],
+    available_version = availableVersion
   )
 
   # report
@@ -111,16 +127,29 @@ checkPackages <- function(pkgs) {
   if (length(notInstalled) > 0) {
     cli::cli_inform(c("x" = "The following packages are not installed: {.pkg {notInstalled}}."))
   }
-  notLatest <- pkgs$package[pkgs$version != pkgs$available_version & pkgs$is_installed]
+  versionUnknown <- pkgs$package[pkgs$is_installed & is.na(pkgs$available_version)]
+  notLatest <- pkgs$package[
+    pkgs$is_installed & !is.na(pkgs$available_version) &
+      pkgs$version != pkgs$available_version
+  ]
   if (length(notLatest) > 0) {
-    cli::cli_inform(c("!" = "The following packages latest version are not installed: {.pkg {notLatest}}."))
+    cli::cli_inform(c("!" = "The following packages are not at the latest repository version: {.pkg {notLatest}}."))
+  }
+  if (length(versionUnknown) > 0 || is.null(available) || nrow(available) == 0L) {
+    cli::cli_inform(c(i = "Could not check repository versions for all required packages."))
   }
 
   allPkgs <- sort(unique(c(notInstalled, notLatest)))
   if (length(allPkgs) > 0) {
-    fun <- ifelse("pak" %in% notInstalled, "install.packages", "pak::pkg_install")
-    code <- paste0(fun, "(c(\"", paste0(allPkgs, collapse = "\", \""), "\"))")
-    cli::cli_inform(c(i = "RUN THE FOLLOWING BOLCK TO FIX THIS: {.run {code}}"))
+    packageList <- paste0('"', allPkgs, '"', collapse = ", ")
+    code <- paste0(
+      "install.packages(c(", packageList,
+      '), repos = "https://cloud.r-project.org")'
+    )
+    cli::cli_inform(c(
+      i = "Copy and run this command in the R console to install or update the packages:",
+      ">" = "{.code {code}}"
+    ))
   }
 
   # report
@@ -132,13 +161,19 @@ checkPackages <- function(pkgs) {
     }
   } else {
     if (length(notLatest) > 0) {
-      ms <- c("!" = paste0(length(notLatest), " packages do not have the latest version."))
+      ms <- c("!" = paste0(length(notLatest), " packages are not at the latest repository version."))
+    } else if (length(versionUnknown) > 0 || is.null(available) || nrow(available) == 0L) {
+      ms <- c("i" = "All required packages are installed; repository versions could not be checked.")
     } else {
-      ms <- c("v" = "All packages installed and up to date.")
+      ms <- c("v" = "All required packages are installed and up to date.")
     }
   }
 
-  dplyr::tibble(message = ms, symbol = names(ms), passed = names(ms) == "v")
+  dplyr::tibble(
+    message = ms,
+    symbol = names(ms),
+    passed = names(ms) %in% c("v", "i")
+  )
 }
 checkDatasets <- function(datasets) {
   if (length(datasets) == 0) {
@@ -162,7 +197,7 @@ checkDatasets <- function(datasets) {
       i = "Restart R once the `.Renviron` file is populated."
     ))
     return(dplyr::tibble(
-      message = paste0(key, " is not setup, datasets can not be downloaded"),
+      message = paste0(key, " is not set up; datasets cannot be downloaded."),
       symbol = "x",
       passed = FALSE
     ))
@@ -170,7 +205,7 @@ checkDatasets <- function(datasets) {
 
   if (!rlang::is_installed("omock")) {
     return(dplyr::tibble(
-      message = "omock is not installed, datasets can not be downloaded",
+      message = "omock is not installed; datasets cannot be downloaded.",
       symbol = "x",
       passed = FALSE
     ))
@@ -181,8 +216,8 @@ checkDatasets <- function(datasets) {
     suppressMessages()
   if (length(notDownloaded) > 0) {
     cli::cli_inform(c(
-      x = "{.pkg {notDownloaded}} not been downloaded.",
-      i = "To download a dataset use the following code: {.run omock::omock::downloadMockDataset(\"{notDownloaded[1]}\")}."
+      x = "The following datasets have not been downloaded: {.pkg {notDownloaded}}.",
+      i = "To download a dataset, run {.code omock::downloadMockDataset(\"{notDownloaded[1]}\")} in the R console."
     ))
     return(dplyr::tibble(
       message = paste0(length(notDownloaded), " datasets not downloaded"),
@@ -194,7 +229,7 @@ checkDatasets <- function(datasets) {
   # duckdb is downloaded
   if (!rlang::is_installed("duckdb")) {
     return(dplyr::tibble(
-      message = "duckdb is not installed, datasets can not be build into cdm",
+      message = "duckdb is not installed, so datasets cannot be built into a CDM.",
       symbol = "x",
       passed = FALSE
     ))

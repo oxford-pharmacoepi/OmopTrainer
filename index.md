@@ -28,15 +28,19 @@ The default `base` training specification checks that:
 
 - R 4.1 or later is installed.
 - Rtools is available on Windows.
-- The required R packages are installed and at the latest versions
-  available from your configured repositories.
+- All required R packages are installed. Packages with an explicit
+  `(>= version)` requirement must meet that minimum; packages without
+  one are not checked for updates.
 - The required mock datasets are downloaded and DuckDB is installed.
 - Quarto is installed.
 
-If packages are missing or out of date, the validator prints an
+If packages are missing, the validator prints an
 [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
-command to copy into the R console. It does not run that command for
-you. Rtools and Quarto must be installed separately when required.
+command to copy into the R console. If an installed package is below its
+stated minimum, install it from a repository that provides that version;
+the configured repository may not have a suitable release. The validator
+does not install anything automatically. Rtools and Quarto must be
+installed separately when required.
 
 ## Configure the OMOP data folder
 

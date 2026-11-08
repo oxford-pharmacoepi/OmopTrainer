@@ -46,7 +46,65 @@ currentRVersion <- function() getRversion()
 currentOperatingSystem <- function() .Platform$OS.type
 whichExecutables <- function(names) Sys.which(names)
 installedPackages <- function() utils::installed.packages()
-availablePackages <- function(repos) utils::available.packages(repos = repos)
+packageRepositories <- function() getOption("repos")
+packageInstallType <- function() {
+  type <- getOption("pkgType")
+  if (identical(type, "both")) {
+    if (identical(.Platform$pkgType, "source")) "source" else "binary"
+  } else {
+    type
+  }
+}
+packageInstallCommand <- function(packages, repos, type) {
+  packageList <- paste0('"', packages, '"', collapse = ", ")
+  reposCode <- paste(deparse(repos, width.cutoff = 500L), collapse = "")
+  paste0(
+    "install.packages(c(", packageList, "), repos = ", reposCode,
+    ', type = "', type, '")'
+  )
+}
+parsePackageRequirements <- function(requirements) {
+  pattern <- "^([[:alnum:].]+)(?:\\s*\\(>=\\s*([^()[:space:]]+)\\))?$"
+  matches <- regmatches(requirements, regexec(pattern, requirements, perl = TRUE))
+  invalid <- lengths(matches) == 0L
+  if (any(invalid)) {
+    stop(
+      "Invalid package requirement(s): ",
+      paste(requirements[invalid], collapse = ", "),
+      ". Use 'package' or 'package (>= version)'.",
+      call. = FALSE
+    )
+  }
+
+  package <- vapply(matches, `[[`, character(1), 2L)
+  minimumVersion <- vapply(matches, function(x) {
+    if (length(x) >= 3L) x[[3L]] else ""
+  }, character(1))
+  hasMinimum <- nzchar(minimumVersion)
+  badVersion <- vapply(minimumVersion[hasMinimum], function(version) {
+    tryCatch({
+      package_version(version)
+      FALSE
+    }, error = function(e) TRUE)
+  }, logical(1))
+  if (any(badVersion)) {
+    stop(
+      "Invalid minimum package version(s): ",
+      paste(minimumVersion[hasMinimum][badVersion], collapse = ", "),
+      ".",
+      call. = FALSE
+    )
+  }
+  if (anyDuplicated(package)) {
+    stop("Package requirements must not contain duplicate package names.", call. = FALSE)
+  }
+
+  data.frame(
+    package = package,
+    minimum_version = minimumVersion,
+    stringsAsFactors = FALSE
+  )
+}
 isPackageInstalled <- function(package) rlang::is_installed(package)
 omopDataFolder <- function() Sys.getenv("OMOP_DATA_FOLDER", unset = "")
 isMockDatasetDownloaded <- function(dataset) omock::isMockDatasetDownloaded(dataset)
@@ -103,7 +161,8 @@ checkRToolsInstalled <- function(installed) {
   }
 }
 checkPackages <- function(pkgs) {
-  repos <- getOption("repos")
+  requirements <- parsePackageRequirements(pkgs)
+  repos <- packageRepositories()
   if (is.null(repos) || !length(repos)) {
     repos <- c(CRAN = "https://cloud.r-project.org")
   } else {
@@ -114,76 +173,85 @@ checkPackages <- function(pkgs) {
       repos[["CRAN"]] <- "https://cloud.r-project.org"
     }
   }
-  available <- tryCatch(
-    availablePackages(repos = repos),
-    error = function(e) NULL
-  )
+  repoNames <- names(repos)
+  repos <- as.character(repos)
+  names(repos) <- repoNames
   installed <- installedPackages()
-  availableVersion <- if (is.null(available) || nrow(available) == 0L) {
-    rep(NA_character_, length(pkgs))
-  } else {
-    available[match(pkgs, available[, "Package"]), "Version"]
-  }
-
-  # check status
-  pkgs <- dplyr::tibble(
-    package = pkgs,
-    is_installed = pkgs %in% installed[, "Package"],
-    version = installed[match(pkgs, installed[, "Package"]), "Version"],
-    available_version = availableVersion
-  )
+  packageIndex <- match(requirements$package, installed[, "Package"])
+  requirements$version <- installed[packageIndex, "Version"]
+  requirements$is_installed <- !is.na(packageIndex)
+  requirements$below_minimum <- FALSE
+  hasMinimum <- nzchar(requirements$minimum_version)
+  hasVersion <- hasMinimum & requirements$is_installed & !is.na(requirements$version)
+  requirements$below_minimum[hasVersion] <-
+    package_version(requirements$version[hasVersion]) <
+    package_version(requirements$minimum_version[hasVersion])
+  requirements$version_unknown <- hasMinimum & requirements$is_installed &
+    is.na(requirements$version)
 
   # report
-  notInstalled <- pkgs$package[!pkgs$is_installed]
+  notInstalled <- requirements$package[!requirements$is_installed]
   if (length(notInstalled) > 0) {
     cli::cli_inform(c("x" = "The following packages are not installed: {.pkg {notInstalled}}."))
   }
-  versionUnknown <- pkgs$package[pkgs$is_installed & is.na(pkgs$available_version)]
-  notLatest <- pkgs$package[
-    pkgs$is_installed & !is.na(pkgs$available_version) &
-      pkgs$version != pkgs$available_version
-  ]
-  if (length(notLatest) > 0) {
-    cli::cli_inform(c("!" = "The following packages are not at the latest repository version: {.pkg {notLatest}}."))
-  }
-  if (length(versionUnknown) > 0 || is.null(available) || nrow(available) == 0L) {
-    cli::cli_inform(c(i = "Could not check repository versions for all required packages."))
-  }
-
-  allPkgs <- sort(unique(c(notInstalled, notLatest)))
-  if (length(allPkgs) > 0) {
-    packageList <- paste0('"', allPkgs, '"', collapse = ", ")
-    code <- paste0(
-      "install.packages(c(", packageList,
-      '), repos = "https://cloud.r-project.org")'
+  belowMinimum <- requirements[requirements$below_minimum, , drop = FALSE]
+  if (nrow(belowMinimum) > 0L) {
+    details <- paste0(
+      belowMinimum$package,
+      " (installed ", belowMinimum$version,
+      "; required >= ", belowMinimum$minimum_version, ")"
     )
     cli::cli_inform(c(
+      "!" = "These packages do not meet their minimum required versions: {.val {details}}."
+    ))
+  }
+  versionUnknown <- requirements$package[requirements$version_unknown]
+  if (length(versionUnknown) > 0L) {
+    cli::cli_inform(c(
+      x = "Could not determine installed versions for: {.pkg {versionUnknown}}."
+    ))
+  }
+
+  if (nrow(belowMinimum) > 0L) {
+    cli::cli_inform(c(
+      i = "Install these packages from a repository that provides the stated minimum versions. The configured repository may not have a suitable version."
+    ))
+  }
+
+  allPkgs <- sort(unique(c(notInstalled, versionUnknown)))
+  if (length(allPkgs) > 0) {
+    code <- packageInstallCommand(allPkgs, repos, packageInstallType())
+    cli::cli_inform(c(
       i = "Copy and run this command in the R console to install or update the packages:",
-      ">" = "{.code {code}}"
+      ">" = "{.code {code}}",
+      "Restart R before checking again."
     ))
   }
 
   # report
   if (length(notInstalled) > 0) {
-    if (length(notLatest) > 0) {
-      ms <- c("x" = paste0(length(notInstalled), " packages not installed, ", length(notLatest), " packages do not have the latest version."))
+    if (nrow(belowMinimum) > 0L) {
+      ms <- c("x" = paste0(
+        length(notInstalled), " packages not installed, ",
+        nrow(belowMinimum), " packages below their minimum required version."
+      ))
     } else {
       ms <- c("x" = paste0(length(notInstalled), " packages not installed."))
     }
   } else {
-    if (length(notLatest) > 0) {
-      ms <- c("!" = paste0(length(notLatest), " packages are not at the latest repository version."))
-    } else if (length(versionUnknown) > 0 || is.null(available) || nrow(available) == 0L) {
-      ms <- c("i" = "All required packages are installed; repository versions could not be checked.")
+    if (nrow(belowMinimum) > 0L) {
+      ms <- c("!" = paste0(nrow(belowMinimum), " packages are below their minimum required version."))
+    } else if (length(versionUnknown) > 0L) {
+      ms <- c("x" = "Could not verify the minimum version for some installed packages.")
     } else {
-      ms <- c("v" = "All required packages are installed and up to date.")
+      ms <- c("v" = "All required packages are installed and meet the specified minimum versions.")
     }
   }
 
   dplyr::tibble(
     message = ms,
     symbol = names(ms),
-    passed = names(ms) %in% c("v", "i")
+    passed = names(ms) == "v"
   )
 }
 checkDatasets <- function(datasets) {

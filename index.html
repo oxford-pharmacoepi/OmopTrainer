@@ -21,7 +21,7 @@
 
     <a class="navbar-brand me-2" href="index.html">OmopTrainer</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.0.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.0</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -48,36 +48,50 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>The goal of OmopTrainer is to …</p>
+<p>OmopTrainer checks whether an R session has the software, packages, and data needed for an OMOP training. It reports the checks that pass or need attention and gives commands or instructions to address common setup problems. It does not install software or packages automatically.</p>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of OmopTrainer from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<p>Install the development version from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"pak"</span><span class="op">)</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"oxford-pharmacoepi/OmopTrainer"</span><span class="op">)</span></span></code></pre></div>
 </div>
 <div class="section level2">
-<h2 id="example">Example<a class="anchor" aria-label="anchor" href="#example"></a>
+<h2 id="check-your-setup">Check your setup<a class="anchor" aria-label="anchor" href="#check-your-setup"></a>
 </h2>
-<p>This is a basic example which shows you how to solve a common problem:</p>
+<p>Run the validator from an R session:</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://oxford-pharmacoepi.github.io/OmopTrainer/">OmopTrainer</a></span><span class="op">)</span></span>
-<span><span class="co">## basic example code</span></span></code></pre></div>
-<p>What is special about using <code>README.Rmd</code> instead of just <code>README.md</code>? You can include R chunks like so:</p>
+<code class="sourceCode R"><span><span class="fu">OmopTrainer</span><span class="fu">::</span><span class="fu"><a href="reference/validateSetup.html">validateSetup</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>The default <code>base</code> training specification checks that:</p>
+<ul>
+<li>R 4.1 or later is installed.</li>
+<li>Rtools is available on Windows.</li>
+<li>The required R packages are installed and at the latest versions available from your configured repositories.</li>
+<li>The required mock datasets are downloaded and DuckDB is installed.</li>
+<li>Quarto is installed.</li>
+</ul>
+<p>If packages are missing or out of date, the validator prints an <code><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages()</a></code> command to copy into the R console. It does not run that command for you. Rtools and Quarto must be installed separately when required.</p>
+</div>
+<div class="section level2">
+<h2 id="configure-the-omop-data-folder">Configure the OMOP data folder<a class="anchor" aria-label="anchor" href="#configure-the-omop-data-folder"></a>
+</h2>
+<p>Set <code>OMOP_DATA_FOLDER</code> to a local folder where <code>omock</code> can store its mock datasets. The simplest way is to open your user <code>.Renviron</code> file:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary</a></span><span class="op">(</span><span class="va">cars</span><span class="op">)</span></span>
-<span><span class="co">#&gt;      speed           dist       </span></span>
-<span><span class="co">#&gt;  Min.   : 4.0   Min.   :  2.00  </span></span>
-<span><span class="co">#&gt;  1st Qu.:12.0   1st Qu.: 26.00  </span></span>
-<span><span class="co">#&gt;  Median :15.0   Median : 36.00  </span></span>
-<span><span class="co">#&gt;  Mean   :15.4   Mean   : 42.98  </span></span>
-<span><span class="co">#&gt;  3rd Qu.:19.0   3rd Qu.: 56.00  </span></span>
-<span><span class="co">#&gt;  Max.   :25.0   Max.   :120.00</span></span></code></pre></div>
-<p>You’ll still need to render <code>README.Rmd</code> regularly, to keep <code>README.md</code> up-to-date. <code>devtools::build_readme()</code> is handy for this.</p>
-<p>You can also embed plots, for example:</p>
-<p><img src="reference/figures/README-pressure-1.png" alt="" width="100%"></p>
-<p>In that case, don’t forget to commit and push the resulting figure files, so they display on GitHub and CRAN.</p>
+<code class="sourceCode R"><span><span class="fu">usethis</span><span class="fu">::</span><span class="fu"><a href="https://usethis.r-lib.org/reference/edit.html" class="external-link">edit_r_environ</a></span><span class="op">(</span><span class="op">)</span></span></code></pre></div>
+<p>Add a line with the path to your folder, for example:</p>
+<pre class="text"><code><span><span class="va">OMOP_DATA_FOLDER</span><span class="op">=</span><span class="st">"/Users/your-name/OMOP"</span></span></code></pre>
+<p>On Windows, use a path such as <code>C:/Users/your-name/OMOP</code>. Save the file and restart R so the environment variable takes effect. Run <code><a href="reference/validateSetup.html">OmopTrainer::validateSetup()</a></code> and follow its package installation instructions before downloading data. The <code>omock</code> package must be installed to download the mock datasets.</p>
+<p>Download the datasets required by the default training specification:</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu">omock</span><span class="fu">::</span><span class="fu"><a href="https://ohdsi.github.io/omock/reference/downloadMockDataset.html" class="external-link">downloadMockDataset</a></span><span class="op">(</span><span class="st">"delphi-100k"</span><span class="op">)</span></span>
+<span><span class="fu">omock</span><span class="fu">::</span><span class="fu"><a href="https://ohdsi.github.io/omock/reference/downloadMockDataset.html" class="external-link">downloadMockDataset</a></span><span class="op">(</span><span class="st">"synpuf-1k"</span><span class="op">)</span></span></code></pre></div>
+<p>Run <code><a href="reference/validateSetup.html">OmopTrainer::validateSetup()</a></code> again to confirm the datasets are available.</p>
+</div>
+<div class="section level2">
+<h2 id="training-specifications">Training specifications<a class="anchor" aria-label="anchor" href="#training-specifications"></a>
+</h2>
+<p>The package currently includes a <code>base</code> specification. Package developers can edit the YAML specification in <code>data-raw/specs/</code> and regenerate the internal specification data with <code>source("data-raw/specs.R")</code>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="license">
@@ -99,7 +113,7 @@
 <div class="developers">
 <h2 data-toc-skip>Developers</h2>
 <ul class="list-unstyled">
-<li>First Last <br><small class="roles"> Author, maintainer </small>   </li>
+<li>Martí Català <br><small class="roles"> Author, maintainer </small> <a href="https://orcid.org/0000-0003-3308-9905" target="orcid.widget" aria-label="ORCID" class="external-link"><span class="fab fa-orcid orcid" aria-hidden="true"></span></a>  </li>
 </ul>
 </div>
 
@@ -115,7 +129,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Martí Català.</p>
 </div>
 
 <div class="pkgdown-footer-right">

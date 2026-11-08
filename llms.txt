@@ -1,52 +1,84 @@
 # OmopTrainer
 
-The goal of OmopTrainer is to …
+OmopTrainer checks whether an R session has the software, packages, and
+data needed for an OMOP training. It reports the checks that pass or
+need attention and gives commands or instructions to address common
+setup problems. It does not install software or packages automatically.
 
 ## Installation
 
-You can install the development version of OmopTrainer from
-[GitHub](https://github.com/) with:
+Install the development version from GitHub:
 
 ``` r
 
-# install.packages("pak")
+install.packages("pak")
 pak::pak("oxford-pharmacoepi/OmopTrainer")
 ```
 
-## Example
+## Check your setup
 
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-
-library(OmopTrainer)
-## basic example code
-```
-
-What is special about using `README.Rmd` instead of just `README.md`?
-You can include R chunks like so:
+Run the validator from an R session:
 
 ``` r
 
-summary(cars)
-#>      speed           dist       
-#>  Min.   : 4.0   Min.   :  2.00  
-#>  1st Qu.:12.0   1st Qu.: 26.00  
-#>  Median :15.0   Median : 36.00  
-#>  Mean   :15.4   Mean   : 42.98  
-#>  3rd Qu.:19.0   3rd Qu.: 56.00  
-#>  Max.   :25.0   Max.   :120.00
+OmopTrainer::validateSetup()
 ```
 
-You’ll still need to render `README.Rmd` regularly, to keep `README.md`
-up-to-date. `devtools::build_readme()` is handy for this.
+The default `base` training specification checks that:
 
-You can also embed plots, for example:
+- R 4.1 or later is installed.
+- Rtools is available on Windows.
+- The required R packages are installed and at the latest versions
+  available from your configured repositories.
+- The required mock datasets are downloaded and DuckDB is installed.
+- Quarto is installed.
 
-![](reference/figures/README-pressure-1.png)
+If packages are missing or out of date, the validator prints an
+[`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
+command to copy into the R console. It does not run that command for
+you. Rtools and Quarto must be installed separately when required.
 
-In that case, don’t forget to commit and push the resulting figure
-files, so they display on GitHub and CRAN.
+## Configure the OMOP data folder
+
+Set `OMOP_DATA_FOLDER` to a local folder where `omock` can store its
+mock datasets. The simplest way is to open your user `.Renviron` file:
+
+``` r
+
+usethis::edit_r_environ()
+```
+
+Add a line with the path to your folder, for example:
+
+``` text
+OMOP_DATA_FOLDER="/Users/your-name/OMOP"
+```
+
+On Windows, use a path such as `C:/Users/your-name/OMOP`. Save the file
+and restart R so the environment variable takes effect. Run
+[`OmopTrainer::validateSetup()`](https://oxford-pharmacoepi.github.io/OmopTrainer/reference/validateSetup.md)
+and follow its package installation instructions before downloading
+data. The `omock` package must be installed to download the mock
+datasets.
+
+Download the datasets required by the default training specification:
+
+``` r
+
+omock::downloadMockDataset("delphi-100k")
+omock::downloadMockDataset("synpuf-1k")
+```
+
+Run
+[`OmopTrainer::validateSetup()`](https://oxford-pharmacoepi.github.io/OmopTrainer/reference/validateSetup.md)
+again to confirm the datasets are available.
+
+## Training specifications
+
+The package currently includes a `base` specification. Package
+developers can edit the YAML specification in `data-raw/specs/` and
+regenerate the internal specification data with
+`source("data-raw/specs.R")`.
 
 # Package index
 

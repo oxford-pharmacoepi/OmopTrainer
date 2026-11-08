@@ -33,14 +33,15 @@ The default `base` training specification checks that:
   one are not checked for updates.
 - The required mock datasets are downloaded and DuckDB is installed.
 - Quarto is installed.
+- GitHub Desktop is installed.
 
 If packages are missing, the validator prints an
 [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
 command to copy into the R console. If an installed package is below its
 stated minimum, install it from a repository that provides that version;
 the configured repository may not have a suitable release. The validator
-does not install anything automatically. Rtools and Quarto must be
-installed separately when required.
+does not install anything automatically. Rtools, Quarto, and GitHub
+Desktop must be installed separately when required.
 
 ## Configure the OMOP data folder
 

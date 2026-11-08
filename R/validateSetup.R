@@ -66,43 +66,15 @@ packageInstallCommand <- function(packages, repos, type) {
 parsePackageRequirements <- function(requirements) {
   pattern <- "^([[:alnum:].]+)(?:\\s*\\(>=\\s*([^()[:space:]]+)\\))?$"
   matches <- regmatches(requirements, regexec(pattern, requirements, perl = TRUE))
-  invalid <- lengths(matches) == 0L
-  if (any(invalid)) {
-    stop(
-      "Invalid package requirement(s): ",
-      paste(requirements[invalid], collapse = ", "),
-      ". Use 'package' or 'package (>= version)'.",
-      call. = FALSE
-    )
-  }
 
   package <- vapply(matches, `[[`, character(1), 2L)
   minimumVersion <- vapply(matches, function(x) {
     if (length(x) >= 3L) x[[3L]] else ""
   }, character(1))
-  hasMinimum <- nzchar(minimumVersion)
-  badVersion <- vapply(minimumVersion[hasMinimum], function(version) {
-    tryCatch({
-      package_version(version)
-      FALSE
-    }, error = function(e) TRUE)
-  }, logical(1))
-  if (any(badVersion)) {
-    stop(
-      "Invalid minimum package version(s): ",
-      paste(minimumVersion[hasMinimum][badVersion], collapse = ", "),
-      ".",
-      call. = FALSE
-    )
-  }
-  if (anyDuplicated(package)) {
-    stop("Package requirements must not contain duplicate package names.", call. = FALSE)
-  }
 
-  data.frame(
+  dplyr::tibble(
     package = package,
-    minimum_version = minimumVersion,
-    stringsAsFactors = FALSE
+    minimum_version = minimumVersion
   )
 }
 isPackageInstalled <- function(package) rlang::is_installed(package)

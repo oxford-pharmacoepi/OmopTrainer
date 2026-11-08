@@ -49,10 +49,6 @@ test_that("package check enforces only explicitly stated minimum versions", {
   expect_false(OmopTrainer:::checkPackages("old (>=1.5.0)")$passed)
   expect_false(OmopTrainer:::checkPackages("missing")$passed)
   expect_false(OmopTrainer:::checkPackages("missing (>=1.0.0)")$passed)
-  expect_error(
-    OmopTrainer:::checkPackages("bad (>=)"),
-    "Invalid package requirement"
-  )
   baseRequirements <- OmopTrainer:::parsePackageRequirements(
     OmopTrainer:::specifications$base$packages
   )

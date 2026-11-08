@@ -40,9 +40,20 @@ validateSetup <- function(training = "base") {
   invisible(reportStatus(status))
 }
 
+# Keep system probes behind small helpers so checks can be tested without
+# changing the machine running the tests.
+currentRVersion <- function() getRversion()
+currentOperatingSystem <- function() .Platform$OS.type
+whichExecutables <- function(names) Sys.which(names)
+installedPackages <- function() utils::installed.packages()
+availablePackages <- function(repos) utils::available.packages(repos = repos)
+isPackageInstalled <- function(package) rlang::is_installed(package)
+omopDataFolder <- function() Sys.getenv("OMOP_DATA_FOLDER", unset = "")
+isMockDatasetDownloaded <- function(dataset) omock::isMockDatasetDownloaded(dataset)
+
 checkRVersion <- function(minRVersion) {
   minRVersion <- as.numeric_version(minRVersion)
-  currentVersion <- getRversion()
+  currentVersion <- currentRVersion()
   oldVersion <- currentVersion < minRVersion
   return(dplyr::tibble(
     message = paste0(
@@ -62,7 +73,7 @@ checkRToolsInstalled <- function(installed) {
     ))
   }
 
-  if (.Platform$OS.type != "windows") {
+  if (currentOperatingSystem() != "windows") {
     return(dplyr::tibble(
       message = "Rtools is only required on Windows; check skipped.",
       symbol = "i",
@@ -70,7 +81,7 @@ checkRToolsInstalled <- function(installed) {
     ))
   }
 
-  tools <- Sys.which(c("make", "gcc"))
+  tools <- whichExecutables(c("make", "gcc"))
   available <- all(nzchar(tools))
 
   if (!available) {
@@ -104,10 +115,10 @@ checkPackages <- function(pkgs) {
     }
   }
   available <- tryCatch(
-    utils::available.packages(repos = repos),
+    availablePackages(repos = repos),
     error = function(e) NULL
   )
-  installed <- utils::installed.packages()
+  installed <- installedPackages()
   availableVersion <- if (is.null(available) || nrow(available) == 0L) {
     rep(NA_character_, length(pkgs))
   } else {
@@ -186,7 +197,7 @@ checkDatasets <- function(datasets) {
 
   # check OMOP_DATA_FOLDER is setup
   key <- "OMOP_DATA_FOLDER"
-  folder <- Sys.getenv(x = key, unset = "")
+  folder <- omopDataFolder()
   if (identical(folder, "")) {
     cli::cli_inform(c(
       x = "`{key}` is not setup.",
@@ -203,7 +214,7 @@ checkDatasets <- function(datasets) {
     ))
   }
 
-  if (!rlang::is_installed("omock")) {
+  if (!isPackageInstalled("omock")) {
     return(dplyr::tibble(
       message = "omock is not installed; datasets cannot be downloaded.",
       symbol = "x",
@@ -212,7 +223,7 @@ checkDatasets <- function(datasets) {
   }
 
   # datasets are downloaded
-  notDownloaded <- datasets[!purrr::map_lgl(datasets, omock::isMockDatasetDownloaded)] |>
+  notDownloaded <- datasets[!purrr::map_lgl(datasets, isMockDatasetDownloaded)] |>
     suppressMessages()
   if (length(notDownloaded) > 0) {
     cli::cli_inform(c(
@@ -227,7 +238,7 @@ checkDatasets <- function(datasets) {
   }
 
   # duckdb is downloaded
-  if (!rlang::is_installed("duckdb")) {
+  if (!isPackageInstalled("duckdb")) {
     return(dplyr::tibble(
       message = "duckdb is not installed, so datasets cannot be built into a CDM.",
       symbol = "x",
@@ -250,7 +261,7 @@ checkQuartoInstalled <- function(installed) {
     ))
   }
 
-  quarto <- Sys.which("quarto")
+  quarto <- whichExecutables("quarto")
   available <- nzchar(quarto)
 
   if (!available) {

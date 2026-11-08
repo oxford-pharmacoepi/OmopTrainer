@@ -22,6 +22,8 @@ Depends:
 Suggests: 
     omock,
     purrr,
+    testthat (>= 3.0.0),
     tools,
     usethis,
     yaml
+Config/testthat/edition: 3

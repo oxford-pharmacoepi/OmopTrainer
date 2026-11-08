@@ -4,7 +4,7 @@ Version: 0.1.0
 Authors@R: c(
     person("Martí", "Català", , "marti.catalasabate@ndorms.ox.ac.uk", 
     role = c("aut", "cre"), comment = c(ORCID = "0000-0003-3308-9905"))
-)
+    )
 Description: Checks whether an R environment is set up for OMOP training,
     including the required software, packages, configuration, and training
     data.

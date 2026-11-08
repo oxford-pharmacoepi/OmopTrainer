@@ -37,3 +37,4 @@ datasets:
   - delphi-100k
   - synpuf-1k
 quarto: TRUE
+github-desktop: TRUE

@@ -37,6 +37,11 @@ validateSetup <- function(training = "base") {
   # check quarto installed
   status$quarto <- checkQuartoInstalled(installed = specs$quarto)
 
+  # check GitHub Desktop installed
+  status$github_desktop <- checkGitHubDesktopInstalled(
+    installed = specs$`github-desktop`
+  )
+
   invisible(reportStatus(status))
 }
 
@@ -44,6 +49,7 @@ validateSetup <- function(training = "base") {
 # changing the machine running the tests.
 currentRVersion <- function() getRversion()
 currentOperatingSystem <- function() .Platform$OS.type
+currentSystemName <- function() unname(Sys.info()[["sysname"]])
 whichExecutables <- function(names) Sys.which(names)
 installedPackages <- function() utils::installed.packages()
 packageRepositories <- function() getOption("repos")
@@ -80,6 +86,28 @@ parsePackageRequirements <- function(requirements) {
 isPackageInstalled <- function(package) rlang::is_installed(package)
 omopDataFolder <- function() Sys.getenv("OMOP_DATA_FOLDER", unset = "")
 isMockDatasetDownloaded <- function(dataset) omock::isMockDatasetDownloaded(dataset)
+githubDesktopCandidates <- function() {
+  system <- currentSystemName()
+
+  if (identical(system, "Darwin")) {
+    return(c(
+      "/Applications/GitHub Desktop.app",
+      file.path(path.expand("~"), "Applications", "GitHub Desktop.app")
+    ))
+  }
+
+  if (identical(currentOperatingSystem(), "windows")) {
+    roots <- Sys.getenv(c("LOCALAPPDATA", "PROGRAMFILES", "PROGRAMFILES(X86)"))
+    roots <- roots[nzchar(roots)]
+    return(c(
+      file.path(roots, "GitHubDesktop", "GitHubDesktop.exe"),
+      file.path(roots, "GitHub Desktop", "GitHub Desktop.exe")
+    ))
+  }
+
+  executables <- unname(whichExecutables(c("github-desktop", "github-desktop-bin")))
+  executables[nzchar(executables)]
+}
 
 checkRVersion <- function(minRVersion) {
   minRVersion <- as.numeric_version(minRVersion)
@@ -321,6 +349,34 @@ checkQuartoInstalled <- function(installed) {
       passed = TRUE
     ))
   }
+}
+checkGitHubDesktopInstalled <- function(installed) {
+  if (!installed) {
+    return(dplyr::tibble(
+      message = "GitHub Desktop is not needed for this training.",
+      symbol = "v",
+      passed = TRUE
+    ))
+  }
+
+  available <- any(file.exists(githubDesktopCandidates()))
+  if (!available) {
+    cli::cli_inform(c(
+      x = "GitHub Desktop was not found.",
+      i = "Install it from {.url https://desktop.github.com/}."
+    ))
+    return(dplyr::tibble(
+      message = "GitHub Desktop is not available.",
+      symbol = "x",
+      passed = FALSE
+    ))
+  }
+
+  dplyr::tibble(
+    message = "GitHub Desktop is available.",
+    symbol = "v",
+    passed = TRUE
+  )
 }
 reportStatus <- function(status) {
   status <- dplyr::bind_rows(status, .id = "check")

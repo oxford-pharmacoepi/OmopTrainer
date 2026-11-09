@@ -92,7 +92,8 @@ githubDesktopCandidates <- function() {
   if (identical(system, "Darwin")) {
     return(c(
       "/Applications/GitHub Desktop.app",
-      file.path(path.expand("~"), "Applications", "GitHub Desktop.app")
+      file.path(path.expand("~"), "Applications", "GitHub Desktop.app"),
+      file.path(path.expand("~"), "Downloads", "GitHub Desktop.app")
     ))
   }
 

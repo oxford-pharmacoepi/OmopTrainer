@@ -27,5 +27,6 @@ Suggests:
     testthat (>= 3.0.0),
     tools,
     usethis,
+    withr,
     yaml
 Config/testthat/edition: 3

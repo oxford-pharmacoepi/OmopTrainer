@@ -42,6 +42,8 @@ The default `base` training specification checks that:
 - Quarto is installed.
 - GitHub Desktop is installed.
 
+On macOS, GitHub Desktop is detected in `/Applications`, `~/Applications`, or `~/Downloads`. If you cannot move it to Applications, extract the download so that `GitHub Desktop.app` is directly inside your Downloads folder. A ZIP file alone is not enough.
+
 If packages are missing, the validator prints an `install.packages()` command to copy into the R console. If an installed package is below its stated minimum, install it from a repository that provides that version; the configured repository may not have a suitable release. The validator does not install anything automatically. Rtools, Quarto, and GitHub Desktop must be installed separately when required.
 
 ## Configure the OMOP data folder

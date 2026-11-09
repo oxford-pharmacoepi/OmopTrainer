@@ -103,6 +103,34 @@ test_that("dataset check is deterministic and does not alter the user's setup", 
   expect_true(OmopTrainer:::checkDatasets("downloaded")$passed)
 })
 
+test_that("macOS GitHub Desktop candidates include Downloads", {
+  local_mocked_bindings(
+    currentSystemName = function() "Darwin",
+    .package = "OmopTrainer"
+  )
+
+  expect_contains(
+    OmopTrainer:::githubDesktopCandidates(),
+    file.path(path.expand("~"), "Downloads", "GitHub Desktop.app")
+  )
+})
+
+test_that("GitHub Desktop check accepts an extracted app but not a ZIP alone", {
+  folder <- withr::local_tempdir()
+  app <- file.path(folder, "GitHub Desktop.app")
+  local_mocked_bindings(
+    githubDesktopCandidates = function() app,
+    .package = "OmopTrainer"
+  )
+
+  file.create(file.path(folder, "GitHub Desktop.zip"))
+  expect_false(OmopTrainer:::checkGitHubDesktopInstalled(TRUE)$passed)
+
+  dir.create(app)
+  expect_true(OmopTrainer:::checkGitHubDesktopInstalled(TRUE)$passed)
+  expect_true(OmopTrainer:::checkGitHubDesktopInstalled(FALSE)$passed)
+})
+
 test_that("validateSetup combines the individual check results", {
   pass <- function(...) {
     dplyr::tibble(message = "ok", symbol = "v", passed = TRUE)
@@ -113,6 +141,7 @@ test_that("validateSetup combines the individual check results", {
     checkPackages = pass,
     checkDatasets = pass,
     checkQuartoInstalled = pass,
+    checkGitHubDesktopInstalled = pass,
     .package = "OmopTrainer"
   )
 

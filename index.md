@@ -35,6 +35,11 @@ The default `base` training specification checks that:
 - Quarto is installed.
 - GitHub Desktop is installed.
 
+On macOS, GitHub Desktop is detected in `/Applications`,
+`~/Applications`, or `~/Downloads`. If you cannot move it to
+Applications, extract the download so that `GitHub Desktop.app` is
+directly inside your Downloads folder. A ZIP file alone is not enough.
+
 If packages are missing, the validator prints an
 [`install.packages()`](https://rdrr.io/r/utils/install.packages.html)
 command to copy into the R console. If an installed package is below its
